@@ -1,0 +1,51 @@
+version: '3'
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres:
+    driver: local
+
+services:
+  postgres:
+    build: ./postgres
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=homestead
+      - POSTGRES_USER=homestead
+      - POSTGRES_PASSWORD=secret
+    networks:
+      - backend
+
+
+  php-fpm:
+    build: ./php-fpm
+    volumes:
+      - ./code:/var/www:cached
+    expose:
+      - "9000"
+    networks:
+      - backend
+
+
+  nginx:
+    build:
+      context: ./nginx
+      args:
+        - PHP_UPSTREAM_CONTAINER=php-fpm
+        - PHP_UPSTREAM_PORT=9000
+    volumes:
+      - ./code:/var/www:cached
+      - ./nginx/sites/:/etc/nginx/sites-available
+    ports:
+      - "80:80"
+    depends_on:
+      - php-fpm
+    networks:
+      - backend
